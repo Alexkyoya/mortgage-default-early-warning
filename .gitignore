@@ -1,0 +1,7 @@
+# Freddie Mac data can't be redistributed
+data/
+
+# Python
+.venv/
+__pycache__/
+.ipynb_checkpoints/
