@@ -6,9 +6,12 @@ This project tests whether the first 12 months of a mortgage's payment history c
 
 On the test set, the LSTM has a ROC-AUC of 0.903 and catches 58.2% of the defaults in the 5% riskiest loans, compared with about 36% for the origination-only models and 25.7% for the credit score rule.
 
+**Project page:** https://alexkyoya.github.io/mortgage-default-early-warning/
+
 ## Files
 
 - `mortgage_default_early_warning.ipynb`: the full project (data preparation, EDA, models, experiments and analysis), with all outputs saved.
+- `portfolio/index.html`: the project page, deployed to GitHub Pages.
 - `models/`: the trained models and their training histories. The notebook loads these instead of training again.
 - `requirements.txt`: the Python packages needed.
 
