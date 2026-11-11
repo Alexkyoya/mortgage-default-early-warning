@@ -124,13 +124,13 @@ footer b { color: var(--ink); font-weight: 600; }
   <div class="wrap">
     <div class="label">Case study · Mortgage credit risk · Sequence models</div>
     <h1>Twelve Months<br>Early</h1>
-    <p class="lede">An LSTM reads a mortgage's <b>first 12 months of payments</b> and flags the loans that will default in <b>months 13–24</b>. Trained on 889,676 Freddie Mac loans.</p>
+    <p class="lede">An LSTM reads a mortgage's <b>first 12 months of payments</b> and flags the loans that will default in <b>months 13–24</b>. Trained on 889,676 Freddie Mac loans, then checked against simpler models that see the same payment history.</p>
     <p class="repo"><a href="https://github.com/alexkyoya/mortgage-default-early-warning" target="_blank" rel="noopener">Code and full notebook on GitHub ↗</a></p>
     <div class="kpis">
-      <div class="kpi"><b>58.2%</b><span>of defaults caught in the top 5% riskiest loans</span></div>
-      <div class="kpi"><b>+22 pts</b><span>more defaults caught than origination-only models (36.0%)</span></div>
-      <div class="kpi"><b>0.903</b><span>test ROC-AUC, vs. 0.849 for logistic regression</span></div>
-      <div class="kpi"><b>36.5%</b><span>of defaults caught by reviewing just 1% of loans</span></div>
+      <div class="kpi"><b>58.2%</b><span>of defaults caught by the LSTM in the top 5% riskiest loans</span></div>
+      <div class="kpi"><b>57.0%</b><span>for a logistic regression with three simple payment-history features</span></div>
+      <div class="kpi"><b>36.0%</b><span>with origination data only, no payment history</span></div>
+      <div class="kpi"><b>44.7%</b><span>caught by the LSTM among loans still current at month 12 (43.8% for the simple model)</span></div>
     </div>
   </div>
 </div>
@@ -162,7 +162,7 @@ footer b { color: var(--ink); font-weight: 600; }
       </div>
       <div class="fig">
         <div class="ctl">
-          <div class="legend"><span><i style="background:var(--m1)"></i>LSTM</span><span><i style="background:var(--m2)"></i>Logistic regression</span><span><i style="background:var(--m3)"></i>Lowest credit score</span></div>
+          <div class="legend"><span><i style="background:var(--m1)"></i>LSTM</span><span><i style="background:var(--m2)"></i>Logistic regression (origination only)</span><span><i style="background:var(--m3)"></i>Lowest credit score</span></div>
           <div class="seg" role="group" aria-label="Share of loans reviewed" id="sizeSeg"></div>
         </div>
         <div id="capture"></div>
@@ -173,8 +173,10 @@ footer b { color: var(--ink); font-weight: 600; }
           <thead><tr><th>Model · test set</th><th>ROC-AUC</th><th>PR-AUC</th><th>Recall @ top 5%</th></tr></thead>
           <tbody>
             <tr><td>Lowest credit score rule</td><td>0.767</td><td>0.015</td><td>25.7%</td></tr>
-            <tr><td>Logistic regression</td><td>0.849</td><td>0.024</td><td>36.0%</td></tr>
-            <tr><td>Feed-forward network</td><td>0.849</td><td>0.031</td><td>35.6%</td></tr>
+            <tr><td>Logistic regression (origination only)</td><td>0.849</td><td>0.024</td><td>36.0%</td></tr>
+            <tr><td>Feed-forward network (origination only)</td><td>0.849</td><td>0.031</td><td>35.6%</td></tr>
+            <tr><td>GBM + 3 history features</td><td>0.885</td><td>0.146</td><td>56.1%</td></tr>
+            <tr><td>Logistic regression + 3 history features</td><td>0.897</td><td>0.172</td><td>57.0%</td></tr>
             <tr class="best"><td>LSTM (history + origination)</td><td>0.903</td><td>0.214</td><td>58.2%</td></tr>
           </tbody>
         </table>
@@ -183,7 +185,23 @@ footer b { color: var(--ink); font-weight: 600; }
 
     <section>
       <div class="head">
-        <div class="label">03 · Experiments & limits</div>
+        <div class="label">03 · Validation</div>
+        <div>
+          <h2>Most of the gain is the data, not the LSTM</h2>
+          <p class="col">After a review from someone who works in model validation, I added a fair challenger, split out the easy cases and stress-tested the inputs.</p>
+        </div>
+      </div>
+      <div class="takeaways">
+        <div><b>Simple features almost match it</b><span>A logistic regression with months late, worst status and status at month 12 catches 57.0% of defaults in the top 5%, vs. 58.2% for the LSTM. It is easier to explain and validate.</span></div>
+        <div><b>Already-late loans are the easy part</b><span>Loans 30–89 days late at month 12 are 0.5% of loans but 26% of defaults. Among loans still current, the LSTM catches 44.7%, the simple model 43.8%, origination-only 35.0%.</span></div>
+        <div><b>The LSTM's edge is at the very top</b><span>On current loans its PR-AUC is 0.065 vs. 0.035 for the simple model, so it ranks the very riskiest loans better.</span></div>
+        <div><b>Sensitivity test found a flaw</b><span>Raising LTV alone lowered predicted risk, because LTV and CLTV are almost identical. Raising both together raises it, as expected.</span></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="head">
+        <div class="label">04 · Experiments & limits</div>
         <div>
           <h2>What I tested, and where it breaks</h2>
           <p class="col">Each experiment changed one setting and was run with three random seeds.</p>
@@ -193,7 +211,7 @@ footer b { color: var(--ink); font-weight: 600; }
         <div><b>6 months of history is enough</b><span>PR-AUC 0.177 with 6 months vs. 0.179 with 12. Even 3 months scores 0.169, against 0.029 with no history.</span></div>
         <div><b>GRU ties LSTM</b><span>ROC-AUC 0.902 vs. 0.904. With only 12 steps, the LSTM's extra gate adds nothing.</span></div>
         <div><b>No class weights</b><span>Weights don't improve the ranking, and they inflate predicted probabilities up to 35× the true default rate.</span></div>
-        <div><b>Holds up out of time</b><span>Trained on 2015–16 and tested on 2017 Q1: 54.2% recall at 5%, vs. 22.1% for logistic regression.</span></div>
+        <div><b>Holds up out of time</b><span>Trained on 2015–16 and tested on 2017 Q1: 54.2% recall at 5%, vs. 22.1% for origination-only logistic regression.</span></div>
         <div><b>Blind to sudden shocks</b><span>ROC-AUC drops to 0.78 in Florida and 0.80 in Texas after the 2017 hurricanes. Only 1.3% of missed defaults had any late payment.</span></div>
       </div>
     </section>
@@ -277,7 +295,7 @@ footer b { color: var(--ink); font-weight: 600; }
   ];
   const series = [
     { k: "lstm", name: "LSTM", color: "var(--m1)" },
-    { k: "lr", name: "Logistic regression", color: "var(--m2)" },
+    { k: "lr", name: "Logistic regression (origination only)", color: "var(--m2)" },
     { k: "fico", name: "Lowest credit score", color: "var(--m3)" },
   ];
   const W = 1000, H = 300, L = 44, R = 10, T = 18, B = 34;
